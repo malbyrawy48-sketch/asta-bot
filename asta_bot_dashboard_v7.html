@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASTA BOT V5</title>
+<style>
+:root{color-scheme:dark;--bg:#080d0b;--panel:#111b16;--green:#39e58c;--muted:#a8b8ae}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#f1fff6;font-family:system-ui,Arial;padding:18px}
+header{max-width:850px;margin:10px auto 22px;border:1px solid #24583c;border-radius:18px;padding:22px;background:linear-gradient(130deg,#10251a,#0b1110)}
+h1{margin:0;color:var(--green);letter-spacing:2px}header p,.muted{color:var(--muted)}
+main{max-width:850px;margin:auto;display:grid;gap:16px}.card{background:var(--panel);border:1px solid #20392b;border-radius:16px;padding:18px}
+h2{margin-top:0;color:var(--green)}input,button{font:inherit;border-radius:10px;padding:11px;border:1px solid #315640;background:#0a130e;color:white}
+input{width:100%;margin:5px 0 10px}button{cursor:pointer;background:#123d27;border-color:#267849}button:hover{background:#195b37}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.rank{display:flex;justify-content:space-between;gap:8px;padding:12px;margin:7px 0;background:#0a130e;border-radius:10px;align-items:center}
+.tag{color:var(--green);font-weight:700}.small{font-size:13px;color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:560px){.row{grid-template-columns:1fr}}
+</style></head>
+<body>
+<header><h1>ASTA BOT <span class="small">V5</span></h1><p>لوحة فعاليات الأنمي والنقاط والرتب — نسخة تجريبية محلية</p></header>
+<main>
+<section class="card"><h2>🏅 نظام الرتب</h2>
+<div class="rank"><b>🌱 مبتدئ</b><span>0 – 49 نقطة</span></div>
+<div class="rank"><b>⚔️ محارب</b><span>50 – 149 نقطة</span></div>
+<div class="rank"><b>🔥 أسطورة</b><span>150 – 299 نقطة</span></div>
+<div class="rank"><b>👑 ملك الأنمي</b><span>300 نقطة فأكثر</span></div>
+<p class="small">الرتبة تتحدث تلقائياً بحسب مجموع نقاط كل عضو.</p></section>
+<section class="card"><h2>⭐ إدارة نقاط الأعضاء</h2>
+<label>اسم العضو</label><input id="member" placeholder="مثال: أحمد">
+<div class="row"><div><label>عدد النقاط</label><input id="points" type="number" min="1" value="10"></div><div><label>السبب (اختياري)</label><input id="reason" placeholder="فوز في مسابقة"></div></div>
+<div class="actions"><button onclick="changePoints(1)">إضافة نقاط</button><button onclick="changePoints(-1)">خصم نقاط</button></div>
+<div id="members"></div></section>
+<section class="card"><h2>🎌 فعاليات الأنمي</h2>
+<label>اسم الفعالية</label><input id="eventName" placeholder="مثال: تحدي ناروتو">
+<label>وصف الفعالية</label><input id="eventDesc" placeholder="اكتب تفاصيل الفعالية">
+<button onclick="addEvent()">إنشاء فعالية</button><div id="events"></div></section>
+<section class="card"><h2>📊 الترتيب العام</h2><div id="leaderboard"></div></section>
+
+<section class="card" id="manual-anime-games">
+  <h2>🎮 فعاليات الأنمي — تشغيل يدوي</h2><p class="small">بعد بدء التحدي، انسخ نص السؤال والصقه في مجموعة واتساب بنفسك. اللوحة لا ترسل رسائل تلقائياً.</p>
+  <p class="small">اختر نوع التحدي، اكتب السؤال والإجابة، ثم اضغط ابدأ. لن تبدأ أي فعالية من نفسها.</p>
+  <label>نوع الفعالية</label>
+  <select id="gameType" style="width:100%;margin:5px 0 10px;padding:11px;border-radius:10px;background:#0a130e;color:white;border:1px solid #315640">
+    <option>تخمين الشخصية من الصورة</option>
+    <option>تفكيك اسم شخصية</option>
+    <option>من صاحب العبارة؟</option>
+    <option>خمن الأنمي من الإيموجي</option>
+    <option>صح أو خطأ</option>
+  </select>
+  <label>مستوى السؤال</label>
+  <select id="gameLevel" style="width:100%;margin:5px 0 10px;padding:11px;border-radius:10px;background:#0a130e;color:white;border:1px solid #315640">
+    <option>سهل</option><option selected>متوسط</option><option>صعب</option>
+  </select>
+  <label>السؤال أو التلميح</label>
+  <input id="gameQuestion" placeholder="اكتب السؤال أو الحروف المبعثرة أو الإيموجي">
+  <label>صورة (اختياري — لتحدي تخمين الصورة)</label>
+  <input id="gameImage" type="file" accept="image/*">
+  <img id="gamePreview" alt="معاينة صورة التحدي" style="display:none;max-width:100%;max-height:220px;border-radius:12px;margin:8px 0">
+  <label>الإجابة الصحيحة</label>
+  <input id="gameAnswer" placeholder="اكتب الإجابة — تبقى مخفية حتى تكشفها">
+  <div class="row">
+    <div><label>نقاط الفائز</label><input id="gameReward" type="number" min="1" value="10"></div>
+    <div style="display:flex;align-items:end"><button style="width:100%" onclick="startManualAnimeGame()">ابدأ الفعالية ▶</button></div>
+  </div>
+  <div id="activeAnimeGame" style="margin-top:14px"></div>
+</section>
+
+<p class="small">تنبيه: هذه لوحة تجريبية تحفظ البيانات في متصفح هذا الجهاز فقط. لا تتصل بواتساب ولا ترسل رسائل أو تدير أعضاء المجموعة تلقائياً.</p>
+</main>
+<script>
+const get=(k,d)=>{try{return JSON.parse(localStorage.getItem('asta5_'+k))??d}catch{return d}};
+let members=get('members',{}),events=get('events',[]);
+function save(){localStorage.setItem('asta5_members',JSON.stringify(members));localStorage.setItem('asta5_events',JSON.stringify(events));render()}
+function rank(n){return n>=300?'👑 ملك الأنمي':n>=150?'🔥 أسطورة':n>=50?'⚔️ محارب':'🌱 مبتدئ'}
+function safe(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function changePoints(sign){let name=document.getElementById('member').value.trim(),n=Number(document.getElementById('points').value);if(!name||!Number.isFinite(n)||n<=0){alert('اكتب اسم العضو وعدداً صحيحاً للنقاط');return}members[name]=Math.max(0,(members[name]||0)+sign*n);save()}
+function addEvent(){let name=document.getElementById('eventName').value.trim(),desc=document.getElementById('eventDesc').value.trim();if(!name){alert('اكتب اسم الفعالية');return}events.unshift({name,desc});save();document.getElementById('eventName').value='';document.getElementById('eventDesc').value=''}
+function render(){let sorted=Object.entries(members).sort((a,b)=>b[1]-a[1]);document.getElementById('members').innerHTML=sorted.map(([n,p])=>`<div class="rank"><span><b>${safe(n)}</b><br><span class="small">${rank(p)}</span></span><span class="tag">${p} نقطة</span></div>`).join('')||'<p class="small">لا توجد نقاط مسجلة بعد.</p>';document.getElementById('leaderboard').innerHTML=sorted.map(([n,p],i)=>`<div class="rank"><b>${i+1}. ${safe(n)}</b><span>${rank(p)} · ${p}</span></div>`).join('')||'<p class="small">الترتيب سيظهر بعد تسجيل النقاط.</p>';document.getElementById('events').innerHTML=events.map((e,i)=>`<div class="rank"><span><b>${safe(e.name)}</b><br><span class="small">${safe(e.desc)}</span></span><button onclick="removeEvent(${i})">حذف</button></div>`).join('')||'<p class="small">لا توجد فعاليات حالياً.</p>'}
+function removeEvent(i){events.splice(i,1);save()}render();
+</script>
+<script>
+(function(){
+  let activeGame = null, imageData = "";
+  const imageInput = document.getElementById('gameImage');
+  imageInput.addEventListener('change', function(){
+    const file = this.files && this.files[0];
+    const preview = document.getElementById('gamePreview');
+    if(!file){ imageData=""; preview.style.display="none"; return; }
+    if(!file.type.startsWith('image/')){ alert('اختر ملف صورة فقط'); this.value=''; return; }
+    const reader = new FileReader();
+    reader.onload = e => { imageData = e.target.result; preview.src=imageData; preview.style.display='block'; };
+    reader.readAsDataURL(file);
+  });
+  window.startManualAnimeGame = function(){
+    const type = document.getElementById('gameType').value;
+    const level = document.getElementById('gameLevel').value;
+    const question = document.getElementById('gameQuestion').value.trim();
+    const answer = document.getElementById('gameAnswer').value.trim();
+    const reward = Math.max(1, Number(document.getElementById('gameReward').value)||10);
+    if(!question || !answer){ alert('اكتب السؤال والإجابة أولاً'); return; }
+    if(type.includes('الصورة') && !imageData){ alert('أضف صورة لهذا التحدي، أو اختر نوع فعالية آخر'); return; }
+    activeGame = {type,level,question,answer,reward,image:imageData,revealed:false}; window.__astaSnapshot = activeGame;
+    renderActiveGame();
+  };
+  function renderActiveGame(){
+    const host=document.getElementById('activeAnimeGame');
+    if(!activeGame){host.innerHTML='';return;}
+    host.innerHTML = `<div class="rank" style="display:block">
+      <div class="tag">🔴 فعالية نشطة — ${escapeGame(activeGame.type)}</div>
+      <p class="small">المستوى: ${escapeGame(activeGame.level)} · جائزة الفائز: ${activeGame.reward} نقطة</p>
+      ${activeGame.image ? `<img src="${activeGame.image}" alt="صورة سؤال الأنمي" style="display:block;max-width:100%;max-height:240px;border-radius:12px;margin:10px auto">` : ''}
+      <h3>${escapeGame(activeGame.question)}</h3>
+      <p id="gameAnswerReveal" style="display:${activeGame.revealed?'block':'none'};color:#39e58c;font-weight:bold">الإجابة: ${escapeGame(activeGame.answer)}</p>
+      <div class="actions">
+        <button onclick="revealAnimeAnswer()">كشف الإجابة</button>
+        <button onclick="endAnimeGame()">إنهاء الفعالية</button>
+      </div>
+    </div>`;
+  }
+  function escapeGame(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  window.revealAnimeAnswer=function(){if(!activeGame)return;activeGame.revealed=true;renderActiveGame();};
+  window.endAnimeGame=function(){activeGame=null;window.__astaSnapshot=null;renderActiveGame();};
+})();
+</script>
+
+
+<style>
+.copy-status{color:#39e58c;font-size:13px;margin-top:8px}
+</style>
+<script>
+(function(){
+  async function copyForGroup(text){
+    try{
+      if(navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(text);
+      else {
+        const t=document.createElement('textarea'); t.value=text;
+        t.style.position='fixed'; t.style.opacity='0'; document.body.appendChild(t);
+        t.select(); document.execCommand('copy'); t.remove();
+      }
+      let status=document.getElementById('asta-copy-status');
+      if(!status){status=document.createElement('p');status.id='asta-copy-status';status.className='copy-status';document.getElementById('activeAnimeGame').appendChild(status);}
+      status.textContent='✅ تم النسخ! افتح مجموعة واتساب والصق الرسالة.';
+    }catch(e){alert('تعذر النسخ التلقائي؛ انسخ النص يدوياً من السؤال.');}
+  }
+  function addGroupTools(){
+    const host=document.getElementById('activeAnimeGame'), g=window.__astaSnapshot;
+    if(!host || !g || host.querySelector('#asta-copy-question')) return;
+    const tools=document.createElement('div'); tools.className='actions'; tools.style.marginTop='10px';
+    tools.innerHTML='<button id="asta-copy-question">📋 نسخ سؤال المجموعة</button><button id="asta-copy-answer">🔐 نسخ الإجابة للمشرف</button><button id="asta-copy-reveal">🏁 نسخ إعلان الحل</button>';
+    host.appendChild(tools);
+    document.getElementById('asta-copy-question').onclick=()=>copyForGroup('🎌 تحدي ASTA BOT\\n'+g.type+' — المستوى: '+g.level+'\\n\\n'+g.question+'\\n\\n🏆 الجائزة: '+g.reward+' نقاط\\nاكتبوا إجاباتكم!');
+    document.getElementById('asta-copy-answer').onclick=()=>copyForGroup('🔐 الإجابة الصحيحة (للمشرف فقط): '+g.answer);
+    document.getElementById('asta-copy-reveal').onclick=()=>copyForGroup('🏁 انتهى التحدي!\\nالإجابة الصحيحة: '+g.answer+'\\nأحسنتم يا أبطال الأنمي! 🎉');
+    const winner=document.createElement('div'); winner.style.marginTop='12px';
+    winner.innerHTML='<label>اسم العضو الفائز لتسجيل النقاط</label><input id="asta-winner-name" placeholder="اسم الفائز"><button id="asta-award-winner">⭐ تسجيل نقاط الفائز</button>';
+    host.appendChild(winner);
+    document.getElementById('asta-award-winner').onclick=()=>{
+      const name=document.getElementById('asta-winner-name').value.trim();
+      if(!name){alert('اكتب اسم الفائز');return;}
+      let members={};try{members=JSON.parse(localStorage.getItem('asta5_members')||'{}')}catch(e){}
+      members[name]=Math.max(0,Number(members[name])||0)+g.reward;
+      localStorage.setItem('asta5_members',JSON.stringify(members));
+      alert('تم تسجيل '+g.reward+' نقطة لـ '+name+' على هذا الجهاز.');
+    };
+  }
+  const host=document.getElementById('activeAnimeGame');
+  if(host)new MutationObserver(addGroupTools).observe(host,{childList:true,subtree:true});
+  setTimeout(addGroupTools,400);
+})();
+</script>
+
+</body></html>
